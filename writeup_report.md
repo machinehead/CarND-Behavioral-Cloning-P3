@@ -19,9 +19,10 @@ The goals / steps of this project are the following:
 [image_shadow_normalized]: ./examples/2017_11_06_10_32_42_423.jpg "Center camera image with a shadow after histogram equalization"
 [center_lane_driving]: ./examples/center_2017_11_05_19_34_30_916.jpg "Center lane driving example"
 [flipped_center_lane_driving]: ./examples/flipped_center_2017_11_05_19_34_30_916.jpg "Center lane driving example (flipped)"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image" 
+[all_cams_angle_distribution]: ./examples/all_cams_angle_distribution.png "Distribution of shifted angle values for all camera images in the recorded data"
+[all_cams_angle_distribution_flipped]: ./examples/all_cams_angle_distribution_flipped.png "Distribution of shifted angle values for all camera images in the recorded data after flipping"
+[dataset_buckets]: ./examples/dataset_buckets.png "Downsampled buckets"
+[dataset_buckets_detailed]: ./examples/dataset_buckets_detailed.png "Downsampled buckets in more detail"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -37,7 +38,8 @@ My project includes the following files:
 * random_search.py containing a driver script to perform random search for model parameters
 * random_search_results.ipynb - a Jupyter notebook containing analysis of the random search results
 * drive.py for driving the car in autonomous mode
-* model.h5 containing a trained convolution neural network 
+* model.h5 containing a trained convolution neural network
+* run_track1.mp4 containing a recording of the car driving in track 1; run_track2.mp4 containing a recording of the same for track 2.
 * writeup_report.md or writeup_report.pdf summarizing the results
 
 #### 2. Submission includes functional code
@@ -174,11 +176,32 @@ For example, here is an image that has then been flipped:
 ![Center lane driving example][center_lane_driving]
 ![Center lane driving example (flipped)][flipped_center_lane_driving]
 
-Etc ....
+I used side cameras together with the center camera. Here's the distribution of steering angles from the center camera (images from both tracks, so the left turn bias, although clearly seen, is much less pronounced than for the track 1 alone):
 
-After the collection process, I had X number of data points. I then preprocessed this data by ...
+![Distribution of raw angle values for all central camera images in the recorded data][central_cam_angle_distribution]
 
+_(this and following images are produced by the code in explore.ipynb notebook)_
 
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
+Here's the distribution of steering angles for images from all cameras; side cameras use an additional offset of 0.2, which can be clearly seen as two new spikes in the data:
+ 
+![Distribution of shifted angle values for all camera images in the recorded data][all_cams_angle_distribution]
 
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+Flipping all the images (central and side cameras) makes the dataset more symmetrical:
+
+![Distribution of shifted angle values for all camera images in the recorded data after flipping][all_cams_angle_distribution_flipped]
+
+As the last step of data collection, I decided to downsample the data so that the training set would include a higher proportion of more extreme turns.
+
+The downsampling is performed by splitting all the images into 8 buckets, and then downsampling all buckets in a way such that the most frequent bucket is only **example_imbalance** times more frequent than the least frequent bucket. **example_imbalance** is a parameter in modelConf.json; it's best value was chosen to be 4. Since there are always less examples with extreme angles, increasing this parameter increases the size of the training and validation sets, by adding more examples around the steering angle of 0.
+
+![Downsampled buckets][dataset_buckets]
+
+Here's what the downsampled dataset looks like in more detail:
+
+![Downsampled buckets in more detail][dataset_buckets_detailed]
+
+After the collection process, I had around 67500 images overall, or 22500 images per camera. After flipping every image this number doubles to 135000. After the downsampling, the number goes down to approximately 18000 - that's the size of training and validation sets combined. 
+
+I finally randomly shuffled the data set and put 20% of the data into a validation set. 
+
+I used this training data for training the model. The validation set helped determine if the model was over or under fitting. I used 15 epochs for final training; I didn't spend much time optimizing this value, but just made sure that there's no significant decrease of the validation set loss after increasing the number of epochs, and also that there's no increase of the same metric that could potentially be explained by overfitting.  
